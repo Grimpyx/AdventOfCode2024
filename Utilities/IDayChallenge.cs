@@ -8,6 +8,7 @@ namespace AdventOfCode2024.Utilities
 {
     public interface IDayChallenge
     {
-        void Run();
+        void RunFirstStar(DayDataType fullOrSimpleData);
+        void RunSecondStar(DayDataType fullOrSimpleData);
     }
 }
