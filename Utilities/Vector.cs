@@ -26,5 +26,7 @@ namespace AdventOfCode2024.Utilities
         public readonly double Magnitude => Math.Sqrt((x * x) + (y * y));
         public static double Distance(Int2 a, Int2 b) => (b - a).Magnitude;
         public double DistanceTo(Int2 other) => (this - other).Magnitude;
+
+        public readonly bool ContainsNegativeNumber => (x < 0) || (y < 0);
     }
 }
