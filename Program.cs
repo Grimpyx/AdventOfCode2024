@@ -6,7 +6,8 @@ Dictionary<ushort, IDayChallenge> _days = new Dictionary<ushort, IDayChallenge>
 {
     { 1, new Day1() },
     { 2, new Day2() },
-    { 3, new Day3() }
+    { 3, new Day3() },
+    { 4, new Day4() }
 };
 
 // Command loop
@@ -33,6 +34,11 @@ void InterpretCommand(string command)
             "  .. challenge needs to be either '1' for the first star challenge or '2' for the second star challenge.\n");
 
         return;
+    }
+
+    if (command == "quit" || command == "exit" || command == "q")
+    {
+        Environment.Exit(0);
     }
 
     if (command == "clear")
