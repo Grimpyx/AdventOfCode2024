@@ -1,0 +1,22 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace AdventOfCode2024.Utilities
+{
+
+    public struct DataMap<T>
+    {
+        public T[,] grid;
+
+        public DataMap(T[,] grid)
+        {
+            this.grid = grid;
+            Dim = new Int2(grid.GetLength(0), grid.GetLength(1));
+        }
+
+        public Int2 Dim { get; private set; }
+    }
+}
