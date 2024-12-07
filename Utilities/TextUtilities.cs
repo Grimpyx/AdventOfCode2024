@@ -6,14 +6,68 @@ using System.Threading.Tasks;
 
 namespace AdventOfCode2024.Utilities
 {
+    using C = Console;
+    using CC = ConsoleColor;
+
     public static class TextUtilities
     {
-        public static void ColorWrite(ConsoleColor color, string msg)
+        static Dictionary<string, CC> colorMap = new Dictionary<string, CC>
         {
-            Console.ForegroundColor = color;
-            Console.Write(msg);
-            Console.ResetColor();
+            { "Whi", CC.White },
+            { "Gra", CC.Gray },
+            { "DGy", CC.DarkGray },
+            { "Bla", CC.Black },
+
+            { "Gre", CC.Green },
+            { "DGe", CC.DarkGreen },
+
+            { "Mgn", CC.Magenta },
+            { "DMg", CC.DarkMagenta },
+
+            { "Blu", CC.Blue },
+            { "DBl", CC.DarkBlue },
+
+            { "Red", CC.Red },
+            { "DRe", CC.DarkRed },
+
+            { "Yel", CC.Yellow },
+            { "DYe", CC.DarkYellow },
+
+            { "Cya", CC.Cyan },
+            { "DCy", CC.DarkCyan }
+        };
+
+        public static void ColorWrite(CC color, string msg)
+        {
+            C.ForegroundColor = color;
+            C.Write(msg);
+            C.ResetColor();
         }
-        public static void ColorWriteLine(ConsoleColor color, string msg) => ColorWrite(color, msg + "\n");
+        public static void ColorWriteLine(CC color, string msg) => ColorWrite(color, msg + "\n");
+
+        /// <summary>
+        /// Writes a string. It automatically changes text color if you include a substring: '@' followed by three letters. For example "@GreHi! I'm green." will print "Hi I'm green." with green text.
+        /// </summary>
+        /// <param name="msg">String with optional color substrings.</param>
+        public static void CFW(string msg)
+        {
+            string substring = "";
+            for (int i = 0; i < msg.Length; i++)
+            {
+                if (msg[i] == '@')
+                {
+                    if (substring.Length > 0) C.Write(substring);
+                    substring = "";
+                    i++;
+                    string colorString = msg[i..(i+3)];
+                    if (colorMap.TryGetValue(colorString, out CC color)) C.ForegroundColor = color;
+                    i += 2;
+                }
+                else substring += msg[i];
+            }
+            C.Write(substring);
+        }
+        public static void CFWLine(string msg) => CFW(msg + "\n");
+
     }
 }

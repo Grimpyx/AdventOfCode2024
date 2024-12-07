@@ -21,13 +21,22 @@ namespace AdventOfCode2024.Utilities
         public static Int2 operator +(Int2 a, Int2 b) => new Int2(a.x + b.x, a.y + b.y);
         public static Int2 operator -(Int2 a, Int2 b) => new Int2(a.x - b.x, a.y - b.y);
         public static Int2 operator *(int a, Int2 b) => new Int2(a * b.x, a * b.y);
-        //public static Int2 operator /(Int2 a, int b) => new Int2(a.x /, a.y);
+        public static bool operator ==(Int2 a, Int2 b) => a.x == b.x && a.y == b.y;
+        public static bool operator !=(Int2 a, Int2 b) => !(a == b);
 
         public readonly double Magnitude => Math.Sqrt((x * x) + (y * y));
         public static double Distance(Int2 a, Int2 b) => (b - a).Magnitude;
         public double DistanceTo(Int2 other) => (this - other).Magnitude;
 
         public readonly bool ContainsNegativeNumber => (x < 0) || (y < 0);
+
+        public Int2 GetRotated90Clockwise(int times = 1)
+        {
+            if (times % 4 == 1) return new Int2(-y, x);
+            if (times % 4 == 2) return new Int2(-x, -y);
+            if (times % 4 == 3) return new Int2(y, -x);
+            else return this;
+        }
 
         public static Int2 Zero => new Int2(0, 0);
         public static Int2 Up => new Int2(0, -1);

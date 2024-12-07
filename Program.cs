@@ -15,9 +15,7 @@ Dictionary<ushort, IDayChallenge> _days = new Dictionary<ushort, IDayChallenge>
 // Command loop
 while (true)
 {
-    Console.ForegroundColor = ConsoleColor.White;
-    Console.Write("Enter command: (type 'h' for help)\n > ");
-    Console.ForegroundColor = ConsoleColor.Yellow;
+    TextUtilities.CFW("@WhiEnter command: (type 'h' for help)\n > @Yel");
     string? input = Console.ReadLine();
     Console.ResetColor();
     if (input != null) InterpretCommand(input);
@@ -30,7 +28,7 @@ void InterpretCommand(string command)
 
     if (command == "help" || command == "h")
     {
-        Console.WriteLine(
+        TextUtilities.CFWLine(
             "  .. To start a day, write 'day[dataType][challenge]'. For example, 'day14f2'.\n" +
             "  .. dataType needs to be either 'f' for the full dataset, or 's' for the simple dataset.\n" +
             "  .. challenge needs to be either '1' for the first star challenge or '2' for the second star challenge.\n");
@@ -51,16 +49,17 @@ void InterpretCommand(string command)
 
     if (command.Length >= 3 && command[..3] == "day")
     {
+        Console.WriteLine();
         if (!char.IsNumber(command[^1]) || !char.IsNumber(command[^3]) || !char.IsLetter(command[^2]))
         {
-            TextUtilities.ColorWriteLine(ConsoleColor.Red, "Failed to interpret command. Command might not be complete.");
+            TextUtilities.CFWLine("@RedFailed to interpret command. Command might not be complete.");
             return;
         }
 
         if(!ushort.TryParse(new string(command[..^2].Where(char.IsDigit).ToArray()), out ushort dayNumber) || !_days.ContainsKey(dayNumber))
         {
             // If invalid number
-            TextUtilities.ColorWriteLine(ConsoleColor.Red, "Failed to interpret command. Not a valid day.");
+            TextUtilities.CFWLine("@RedFailed to interpret command. Not a valid day.");
             return;
         }
 
@@ -68,14 +67,14 @@ void InterpretCommand(string command)
         char star = command[^1];
         if (star != '1' && star != '2')
         {
-            TextUtilities.ColorWriteLine(ConsoleColor.Red, "Failed to interpret command. '" + star + "' is not a valid part of the challenge. Use '1' or '2'.");
+            TextUtilities.CFWLine($"@RedFailed to interpret command. '{star}' is not a valid part of the challenge. Use '1' or '2'.");
             return;
         }
 
         char fullOrSimple = command[^2];
         if (fullOrSimple != 's' && fullOrSimple != 'f')
         {
-            TextUtilities.ColorWriteLine(ConsoleColor.Red, "Failed to interpret command. '" + fullOrSimple + "' is not a valid dataset. Use 's' for simple data, or 'f' for the full data.");
+            TextUtilities.CFWLine($"@RedFailed to interpret command. '{fullOrSimple}' is not a valid dataset. Use 's' for simple data, or 'f' for the full data.");
             return;
         }
 
@@ -87,10 +86,10 @@ void InterpretCommand(string command)
         else if (star == '2' && fullOrSimple == 's') day.RunSecondStar(DayDataType.Simple);
         else
         {
-            TextUtilities.ColorWriteLine(ConsoleColor.Red, "Failed to interpret command. Not correctly formatted.");
+            TextUtilities.CFWLine($"@RedFailed to interpret command. Not correctly formatted.");
             return;
         }
-        Console.WriteLine($"\nCommand took {stopwatch.ElapsedMilliseconds}ms.\n");
+        TextUtilities.CFWLine($"\n@DGyCommand took @DYe{stopwatch.ElapsedMilliseconds}@DGyms.\n");
         return;
     }
 
