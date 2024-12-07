@@ -28,5 +28,16 @@ namespace AdventOfCode2024.Utilities
         public double DistanceTo(Int2 other) => (this - other).Magnitude;
 
         public readonly bool ContainsNegativeNumber => (x < 0) || (y < 0);
+
+        public static Int2 Zero => new Int2(0, 0);
+        public static Int2 Up => new Int2(0, -1);
+        public static Int2 Right => new Int2(1, 0);
+        public static Int2 Down => new Int2(0, 1);
+        public static Int2 Left => new Int2(-1, 0);
+
+        public override string? ToString()
+        {
+            return $"({x},{y})";
+        }
     }
 }

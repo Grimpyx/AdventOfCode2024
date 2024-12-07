@@ -18,5 +18,9 @@ namespace AdventOfCode2024.Utilities
         }
 
         public Int2 Dim { get; private set; }
+
+        public bool IsInside(Int2 gridPosition) =>
+            gridPosition.x >= 0 && gridPosition.x < Dim.x &&
+            gridPosition.y >= 0 && gridPosition.y < Dim.y;
     }
 }
