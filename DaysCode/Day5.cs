@@ -216,6 +216,15 @@ namespace AdventOfCode2024.Days
                 }
             }
 
+            Console.WriteLine(string.Join(',', updates[3]));
+            Console.WriteLine("Updated:");
+            var tempList = nrLookup.Where(x => updates[3].Contains(x.Key));
+            var ordered = GetOrderedUpdate(tempList.ToDictionary());
+            Console.WriteLine(string.Join(',', ordered));
+
+
+            return;
+
             Stack<List<int>> stackUpdates = new Stack<List<int>>(updates);
             while(stackUpdates.Count > 0)
             {
@@ -233,7 +242,8 @@ namespace AdventOfCode2024.Days
                         if (con.ToTheRight.Contains(update[leftIndex])) // if any value to the left belongs on the right
                         {
                             jumpOut = true;
-                            stackUpdates.Push(GetOrderedUpdate(update, update[leftIndex], con));
+                            var allRelevantNumberLookups = nrLookup.Where(x => update.Contains(x.Key));
+                            stackUpdates.Push(GetOrderedUpdate(allRelevantNumberLookups));
                             break;
                         }
                     }
@@ -245,7 +255,8 @@ namespace AdventOfCode2024.Days
                         if (con.ToTheLeft.Contains(update[rightIndex])) // if any value to the right belongs on the right
                         {
                             jumpOut = true;
-                            stackUpdates.Push(GetOrderedUpdate(update, update[rightIndex], con));
+                            var allRelevantNumberLookups = nrLookup.Where(x => update.Contains(x.Key));
+                            stackUpdates.Push(GetOrderedUpdate(allRelevantNumberLookups));
                             break;
                         }
                     }
@@ -270,11 +281,19 @@ namespace AdventOfCode2024.Days
             TextUtilities.ColorWriteLine(ConsoleColor.Yellow, middlePagesSum.ToString());
         }
 
-        List<int> GetOrderedUpdate(List<int> update, int value, NumberWithConditions con)
+        List<int> GetOrderedUpdate(Dictionary<int, NumberWithConditions> nrLookup)//(List<int> update, int value, NumberWithConditions con)
         {
-            int startLength = update.Count;
-            update.Remove(value);
+            Console.WriteLine("Found an 'update' that was invalid. Trying to reorder.");
 
+            // Start building a new list where all the placement should be ok in order.
+            List<int> newUpdate = new List<int>();
+            newUpdate.Add();
+            for (int i = 1; i < length; i++)
+            {
+                //
+            }
+
+            /*
             for (int activeElement = 0; activeElement < update.Count; activeElement++)
             {
                 bool nextElement = false;
@@ -302,7 +321,7 @@ namespace AdventOfCode2024.Days
             }
 
             if (update.Count != startLength) return [];
-            else return update;
+            else return update;*/
         }
 
 
