@@ -19,7 +19,7 @@ while (true)
     Console.ForegroundColor = ConsoleColor.Yellow;
     string? input = Console.ReadLine();
     Console.ResetColor();
-    InterpretCommand(input);
+    if (input != null) InterpretCommand(input);
 }
 
 

@@ -98,9 +98,6 @@ namespace AdventOfCode2024.Days
 
         public void RunSecondStar(DayDataType fullOrSimpleData)
         {
-            // Settings
-            bool instantDraw = false; // takes too long if you dont draw instantly
-
             // Patterns we're looking for:
             //   M . S  |  M . M  |  S . M  |  S . S
             //   . A .  |  . A .  |  . A .  |  . A .
@@ -159,8 +156,6 @@ namespace AdventOfCode2024.Days
                         {
                             // Reset the lest and counters and move on to the next coordinate
                             adjacents.Clear();
-                            m_counter = 0;
-                            s_counter = 0;
                             break;
                         }
                         adjacents.Add(letter);
