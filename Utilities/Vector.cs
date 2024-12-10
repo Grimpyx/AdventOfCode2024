@@ -48,5 +48,19 @@ namespace AdventOfCode2024.Utilities
         {
             return $"({x},{y})";
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+
+            if (obj.GetHashCode() == GetHashCode()) return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(x, y);
+        }
     }
 }
