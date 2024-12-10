@@ -22,5 +22,10 @@ namespace AdventOfCode2024.Utilities
         public bool IsInside(Int2 gridPosition) =>
             gridPosition.x >= 0 && gridPosition.x < Dim.x &&
             gridPosition.y >= 0 && gridPosition.y < Dim.y;
+
+        public T[,] GetAllAdjacents()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

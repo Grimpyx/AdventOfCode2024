@@ -54,7 +54,7 @@ namespace AdventOfCode2024.Days
             void Compress(LinkedList<Element> list)
             {
                 LinkedListNode<Element>? empty = list.First;
-                if (empty.Value.Id != -1) TryGetNextEmpty(ref empty);
+                if (empty!.Value.Id != -1) TryGetNextEmpty(ref empty);
 
                 LinkedListNode<Element>? number = list.Last;
 
@@ -110,8 +110,8 @@ namespace AdventOfCode2024.Days
                     
                     if(isSimple)
                     {
-                        WriteElement(empty.Value, "@Gre");
-                        WriteElement(number.Value, "@Red");
+                        WriteElement(empty!.Value, "@Gre");
+                        WriteElement(number!.Value, "@Red");
                         TextUtilities.CFWLine("@Gra\n" + new string('-', 80));
                         Console.WriteLine("");
                     }
