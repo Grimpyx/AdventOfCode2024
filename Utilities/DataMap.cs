@@ -23,9 +23,21 @@ namespace AdventOfCode2024.Utilities
             gridPosition.x >= 0 && gridPosition.x < Dim.x &&
             gridPosition.y >= 0 && gridPosition.y < Dim.y;
 
-        public T[,] GetAllAdjacents()
+        public List<Int2> GetAllAdjacentPositions(Int2 from)
         {
-            throw new NotImplementedException();
+            // Get adjacent points
+            List<Int2> allAdjacents = new List<Int2>();
+
+            Int2 nextPos = from + Int2.Up;
+            if (IsInside(nextPos)) allAdjacents.Add(nextPos);
+            nextPos = from + Int2.Down;
+            if (IsInside(nextPos)) allAdjacents.Add(nextPos);
+            nextPos = from + Int2.Right;
+            if (IsInside(nextPos)) allAdjacents.Add(nextPos);
+            nextPos = from + Int2.Left;
+            if (IsInside(nextPos)) allAdjacents.Add(nextPos);
+
+            return allAdjacents;
         }
     }
 }
