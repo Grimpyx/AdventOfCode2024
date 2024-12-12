@@ -36,6 +36,45 @@ namespace AdventOfCode2024.Utilities
             { "Cya", CC.Cyan },
             { "DCy", CC.DarkCyan }
         };
+        static List<string> allColors = new List<string>
+        {
+            "Whi",
+            "Gra",
+            "DGy",
+            "Bla",
+
+            "Gre",
+            "DGe",
+
+            "Mgn",
+            "DMg",
+
+            "Blu",
+            "DBl",
+
+            "Red",
+            "DRe",
+
+            "Yel",
+            "DYe",
+
+            "Cya",
+            "DCy"
+        };
+
+        private static Random rnd = new Random();
+
+        public static string RandomColor()
+        {
+            int random;
+            while ((random = rnd.Next(allColors.Count)) == 3);
+            return GetColor(random);
+        }
+        public static string GetColor(int i)
+        {
+            if (i < 0 || i >= allColors.Count) return "";
+            return ('@' + allColors[i]);
+        }
 
         public static void ColorWrite(CC color, string msg)
         {

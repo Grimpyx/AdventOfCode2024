@@ -39,5 +39,22 @@ namespace AdventOfCode2024.Utilities
 
             return allAdjacents;
         }
+
+        public List<T> GetAllAdjacentValues(Int2 from)
+        {
+            // Get adjacent points
+            List<T> allAdjacents = new List<T>();
+
+            Int2 nextPos = from + Int2.Up;
+            if (IsInside(nextPos)) allAdjacents.Add(grid[nextPos.x, nextPos.y]);
+            nextPos = from + Int2.Down;
+            if (IsInside(nextPos)) allAdjacents.Add(grid[nextPos.x, nextPos.y]);
+            nextPos = from + Int2.Right;
+            if (IsInside(nextPos)) allAdjacents.Add(grid[nextPos.x, nextPos.y]);
+            nextPos = from + Int2.Left;
+            if (IsInside(nextPos)) allAdjacents.Add(grid[nextPos.x, nextPos.y]);
+
+            return allAdjacents;
+        }
     }
 }
