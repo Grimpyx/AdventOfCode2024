@@ -35,11 +35,45 @@ namespace AdventOfCode2024.Days
                 //Int2 currentPosition = Int2.Zero;
 
                 // A* ?
-                PriorityQueue<Int2, int> frontier = new PriorityQueue<Int2, int>();
-                frontier.Enqueue(Int2.Zero, 0); // First step
+                PriorityQueue<Node, int> openQueue = new PriorityQueue<Node, int>();
+                Dictionary<Int2, int> lowest_f = new Dictionary<Int2, int>();
+                HashSet<Int2> closedSet = new HashSet<Int2>();
+
+                // The priority assigned in the open queue represents its f-value
+                Node startNode = new Node(Int2.Zero, 0, null);
+                openQueue.Enqueue(startNode, 0); // First step
+                lowest_f.Add(startNode.Position, 0);
+
+                Node q;
+                int qf;
+
+                while (openQueue.TryDequeue(out q, out qf))
+                {
+                    Node[] successors = new Node[2];
+                    successors[0] = new Node(q.Position + buttonA_change, q.g + 1, q); // Cost is 1 for button A
+                    successors[1] = new Node(q.Position + buttonB_change, q.g + 3, q); // Cost is 3 for button B
+
+                    for (int i = 0; i < successors.Length; i++)
+                    {
+                        Node successor = successors[i];
+                        int successor_h = 0;
+                        int successor_f = successor.g + successor_h;
+
+                        // Try update next successor value
+                        if (lowest_f.TryGetValue(successor.Position, out int currentSuccessor_f))
+                        {
+                            // lowest_f[successor.Position] = currentSuccessor_f;
+                            if (successor_f > currentSuccessor_f) continue;
+                        }
+                    }
+
+                }
+
 
             }
         }
+
+        record Node(Int2 Position, int g, Node Parent);
 
         List<ClawGame> Parse(string[] data)
         {
