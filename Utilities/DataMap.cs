@@ -17,6 +17,21 @@ namespace AdventOfCode2024.Utilities
             Dim = new Int2(grid.GetLength(0), grid.GetLength(1));
         }
 
+        public DataMap(Int2 dimensions, T valueOverAll)
+        {
+            grid = new T[dimensions.x, dimensions.y];
+
+            for (int y = 0; y < dimensions.y; y++)
+            {
+                for (int x = 0; x < dimensions.x; x++)
+                {
+                    grid[x, y] = valueOverAll;
+                }
+            }
+
+            Dim = new Int2(grid.GetLength(0), grid.GetLength(1));
+        }
+
         public Int2 Dim { get; private set; }
 
         public bool IsInside(Int2 gridPosition) =>
