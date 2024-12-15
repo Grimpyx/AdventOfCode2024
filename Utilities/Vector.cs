@@ -39,6 +39,7 @@ namespace AdventOfCode2024.Utilities
         }
 
         public static Int2 Zero => new Int2(0, 0);
+        public static Int2 One => new Int2(1, 1);
         public static Int2 Up => new Int2(0, -1);
         public static Int2 Right => new Int2(1, 0);
         public static Int2 Down => new Int2(0, 1);

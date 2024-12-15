@@ -16,7 +16,8 @@ Dictionary<ushort, IDayChallenge> _days = new Dictionary<ushort, IDayChallenge>
     { 10, new Day10() },
     { 11, new Day11() },
     { 12, new Day12() },
-    { 13, new Day13() }
+    { 13, new Day13() },
+    { 14, new Day14() },
 };
 
 // Command loop
