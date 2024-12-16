@@ -1,4 +1,5 @@
 ﻿using AdventOfCode2024.Utilities;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.Metrics;
 using System.Drawing;
 
@@ -55,12 +56,25 @@ namespace AdventOfCode2024.Days
 
         public void RunSecondStar(DayDataType fullOrSimpleData)
         {
+            // 1465522 too low!!
+            // 1491655 too low!!
+
             var (map, robot, instructionsList) = ParseP2(DataLoader.LoadRowData(15, fullOrSimpleData));
 
             int cursorTopStart = Console.CursorTop;
 
             instructionsList.Reverse(); // required otherwise we pop from the wrong end
             Stack<Int2> instructionStack = new Stack<Int2>(instructionsList);
+
+            int boxInTheBeginning = 0;
+            for (int y = 0; y < map.Dim.y; y++)
+            {
+                for (int x = 0; x < map.Dim.x; x++)
+                {
+                    if (map.grid[x,y] == '.')
+                        boxInTheBeginning++;
+                }
+            }
 
             DrawMap(map, robot);
             while (instructionStack.Count > 0)
@@ -72,15 +86,27 @@ namespace AdventOfCode2024.Days
                 // update each walk so you can see the steps
                 if (fullOrSimpleData == DayDataType.Simple)
                 {
+                    Thread.Sleep(200);
                     Console.SetCursorPosition(0, cursorTopStart);
                     DrawMap(map, robot);
-                    Thread.Sleep(75);
                 }
             }
 
             // Draw the resulting map
             Console.SetCursorPosition(0, cursorTopStart);
             DrawMap(map, robot);
+
+            int boxInTheEnd = 0;
+            for (int y = 0; y < map.Dim.y; y++)
+            {
+                for (int x = 0; x < map.Dim.x; x++)
+                {
+                    if (map.grid[x, y] == '.')
+                        boxInTheEnd++;
+                }
+            }
+
+            Console.WriteLine($"Before: {boxInTheBeginning} After: {boxInTheEnd}");
 
             // Calculate
             long sumOfGPS = 0;
@@ -89,7 +115,7 @@ namespace AdventOfCode2024.Days
                 for (int x = 0; x < map.Dim.x; x++)
                 {
                     char c = map.grid[x, y];
-                    if (c == 'O') sumOfGPS += (100 * y) + x;
+                    if (c == '[') sumOfGPS += (100 * y) + x;
                 }
             }
             TextUtilities.CFWLine($"@Gra >>> Total sum of GPS coordinates: @Yel{sumOfGPS}");
@@ -185,8 +211,6 @@ namespace AdventOfCode2024.Days
                 }
 
 
-
-
                 // Handles left right movement of boxes "[]"
                 if (instruction == Int2.Right || instruction == Int2.Left)
                 {
@@ -220,19 +244,124 @@ namespace AdventOfCode2024.Days
                         map.grid[position.x, position.y] = '.';
                     }
                 }
-                .
-                // Up and down movement of boxes
-                (Int2 left, Int2 right) box;
-                if (nextChar == '[')
+                else if (instruction == Int2.Up || instruction == Int2.Down)
                 {
-                    box.left = nextPos;
-                    box.right = nextPos + Int2.Right;
+                    // Up and down movement of boxes
+                    //nextPos = position + instruction;
+                    //nextChar = map.grid[nextPos.x, nextPos.y];
+
+
+                    (Int2 left, Int2 right) firstBox = (Int2.Zero, Int2.Zero);
+                    // Establish the first box
+                    if (nextChar == '[')
+                    {
+                        firstBox.left = nextPos;
+                        firstBox.right = nextPos + Int2.Right;
+                    }
+                    else if (nextChar == ']')
+                    {
+                        firstBox.left = nextPos + Int2.Left;
+                        firstBox.right = nextPos;
+                    }
+
+
+
+                    List<(Int2 left, Int2 right)> allBoxes = new List<(Int2 left, Int2 right)>();
+                    Stack<(Int2 left, Int2 right)> boxStack = new Stack<(Int2 left, Int2 right)>();
+                    boxStack.Push(firstBox);
+                    allBoxes.Add(firstBox);
+
+                    Int2 nextPosLeft, nextPosRight;
+                    char nextLeftChar, nextRightChar;
+
+                    do
+                    {
+                        var box = boxStack.Pop();
+                        //allBoxes.Add(box);
+
+                        nextPosLeft = box.left + instruction;
+                        nextPosRight = box.right + instruction;
+
+                        nextLeftChar = map.grid[nextPosLeft.x, nextPosLeft.y];
+                        nextRightChar = map.grid[nextPosRight.x, nextPosRight.y];
+
+                        if (nextLeftChar == '#' || nextRightChar == '#')
+                            return;
+                        else if (nextLeftChar == '.' && nextRightChar == '.')
+                        {
+                            // We have a specail case:
+                            //   ##
+                            //    [][]      If the robot pushes the three boxes up, the left of the double
+                            //     []       boxes will not be looked ahead of. Meaning, the system doesnt
+                            //      @       see the '#' that is in the way and still moves the stack.
+                            // We handle this here:
+                            foreach (var item in allBoxes)
+                            {
+                                Int2 lp = item.left + instruction;
+                                char cl = map.grid[lp.x, lp.y];
+                                Int2 rp = item.right + instruction;
+                                char cr = map.grid[rp.x, rp.y];
+
+                                if (cl == '#' || cr == '#') return;
+                            }
+
+
+                            // If we find empty spot, we move ALL previous boxes in the instruction direction
+                            for (int i = allBoxes.Count - 1; i >= 0; i--)
+                            {
+                                var b = allBoxes[i];
+                                Int2 leftTo = b.left + instruction;
+                                Int2 rightTo = b.right + instruction;
+
+                                map.grid[leftTo.x, leftTo.y] = map.grid[b.left.x, b.left.y];
+                                map.grid[rightTo.x, rightTo.y] = map.grid[b.right.x, b.right.y];
+
+                                map.grid[b.left.x, b.left.y] = '.';
+                                map.grid[b.right.x, b.right.y] = '.';
+                            }
+                            position += instruction;
+                            return;
+                        }
+
+                        Int2 offset = Int2.Zero;
+                        bool doubleBox = false;
+                        if (nextLeftChar == '.' && nextRightChar == '[')
+                            offset = Int2.Right;
+                        else if (nextLeftChar == ']' && nextRightChar == '.')
+                            offset = Int2.Left;
+                        else if (nextLeftChar == ']' && nextRightChar == '[')
+                            doubleBox = true;
+
+                        if (doubleBox)
+                        {
+                            (Int2 left, Int2 right) leftBox = (nextPosLeft + Int2.Left, nextPosRight + Int2.Left);
+                            (Int2 left, Int2 right) rightBox = (nextPosLeft + Int2.Right, nextPosRight + Int2.Right);
+
+                            boxStack.Push(leftBox);
+                            allBoxes.Add(leftBox);
+
+                            boxStack.Push(rightBox);
+                            allBoxes.Add(rightBox);
+
+                            continue;
+                        }
+                        else
+                        {
+                            // offset
+                            (Int2 left, Int2 right) nextBox = (nextPosLeft + offset, nextPosRight + offset);
+
+                            boxStack.Push(nextBox);
+                            allBoxes.Add(nextBox);
+
+                            continue;
+                        }
+
+
+                        //box = (nextPosLeft + offset, nextPosRight + offset); // Update what will be the next box
+                    } while (boxStack.Count > 0); //(nextLeftChar != '#' || nextRightChar != '#');
+                    
                 }
-                else if (nextChar == ']')
-                {
-                    box.left = nextPos + Int2.Left;
-                    box.right = nextPos;
-                }
+                
 
 
 
