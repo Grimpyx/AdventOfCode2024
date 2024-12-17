@@ -58,6 +58,13 @@ namespace AdventOfCode2024.Days
         {
             // 1465522 too low!!
             // 1491655 too low!!
+            // 1521453 correct!
+            // Problem I had was that my multiple box algorithm just added all the boxes to move into a list.
+            // But when it was time to move them, there was no guarantee that the next box to move was had a clear path above it.
+            // I remade the algorithm to take more logical STEPS:
+            // We step up once from the start box and add all box to a list. All these boxes can be moved at the same time.
+            // That list of boxes, is added to another list that tracks groups of boxes that can be moved together.
+            // By iterating backward through the group we move the boxes furthest away first.
 
             var (map, robot, instructionsList) = ParseP2(DataLoader.LoadRowData(15, fullOrSimpleData));
 
@@ -77,9 +84,12 @@ namespace AdventOfCode2024.Days
             }
 
             DrawMap(map, robot);
+            int instructionsPerformed = 0; // Tracks when to draw
             while (instructionStack.Count > 0)
             {
                 Int2 instruction = instructionStack.Pop();
+
+                // Perform instruction
                 robot.PerformInstructionP2(map, instruction);
 
                 // If it is the simple dataset,
@@ -90,23 +100,21 @@ namespace AdventOfCode2024.Days
                     Console.SetCursorPosition(0, cursorTopStart);
                     DrawMap(map, robot);
                 }
+                else
+                {
+                    // For the longer dataset, only draw the map every 400th instruction
+                    if (instructionsPerformed % 400 == 0)
+                    {
+                        Console.SetCursorPosition(0, cursorTopStart);
+                        DrawMap(map, robot);
+                    }
+                }
+                instructionsPerformed++;
             }
 
             // Draw the resulting map
             Console.SetCursorPosition(0, cursorTopStart);
             DrawMap(map, robot);
-
-            int boxInTheEnd = 0;
-            for (int y = 0; y < map.Dim.y; y++)
-            {
-                for (int x = 0; x < map.Dim.x; x++)
-                {
-                    if (map.grid[x, y] == '.')
-                        boxInTheEnd++;
-                }
-            }
-
-            Console.WriteLine($"Before: {boxInTheBeginning} After: {boxInTheEnd}");
 
             // Calculate
             long sumOfGPS = 0;
@@ -124,6 +132,7 @@ namespace AdventOfCode2024.Days
         void DrawMap(DataMap<char> map, Robot robot)
         {
             int startTop = Console.CursorTop;
+            string s = "";
             for (int y = 0; y < map.Dim.y; y++)
             {
                 for (int x = 0; x < map.Dim.x; x++)
@@ -134,10 +143,12 @@ namespace AdventOfCode2024.Days
                     if (c == 'O' || c == '[' || c == ']') color = "@Whi";
                     else if (c == '#') color = "@DGy";
 
-                    TextUtilities.CFW(color + c);
+                    s += color + c;
                 }
-                Console.WriteLine();
+                s += "\n";
             }
+            TextUtilities.CFWLine(s);
+
             int endTop = Console.CursorTop;
 
             Console.SetCursorPosition(robot.Position.x, robot.Position.y + startTop);
@@ -197,16 +208,17 @@ namespace AdventOfCode2024.Days
 
             public void PerformInstructionP2(DataMap<char> map, Int2 instruction)
             {
-                Int2 nextPos = position + instruction;
-                char nextChar = map.grid[nextPos.x, nextPos.y];
+                // the next
+                Int2 robotInstructionPosition = position + instruction;
+                char robotInstructionChar = map.grid[robotInstructionPosition.x, robotInstructionPosition.y];
 
                 // If immediately blocked, do nothing and just return.
-                if (nextChar == '#')
+                if (robotInstructionChar == '#')
                     return;
                 // If immediately open empty, move there
-                else if (nextChar == '.')
+                else if (robotInstructionChar == '.')
                 {
-                    position = nextPos;
+                    position = robotInstructionPosition;
                     return;
                 }
 
@@ -214,160 +226,173 @@ namespace AdventOfCode2024.Days
                 // Handles left right movement of boxes "[]"
                 if (instruction == Int2.Right || instruction == Int2.Left)
                 {
-                    while (nextChar == '[' || nextChar == ']')
+                    // Step in the direction of the instruction until either a stop '#' or empty space '.' is found.
+                    while (robotInstructionChar == '[' || robotInstructionChar == ']')
                     {
-                        nextPos += instruction;
-                        nextChar = map.grid[nextPos.x, nextPos.y];
+                        robotInstructionPosition += instruction;
+                        robotInstructionChar = map.grid[robotInstructionPosition.x, robotInstructionPosition.y];
                     }
 
                     // If the next character in line is '#' we cannot move.
-                    // We act as if the 'O' the robot was gonna move to was a '#'
-                    if (nextChar == '#')
+                    // We wont move anything, not even the robot. We return.
+                    if (robotInstructionChar == '#')
                         return;
                     // If there is an empty spot, we move the entire contraption one step
-                    else if (nextChar == '.')
+                    else if (robotInstructionChar == '.')
                     {
-                        int diff = nextPos.x - position.x;
+                        // Depending on if we're moving left or right the logic is slightly different.
+                        // Now when I write the comments, the obvious way is to just use the instruction... But this works :)
+                        int diff = robotInstructionPosition.x - position.x;
                         int dist = Math.Abs(diff);
                         int sign = diff / dist;
 
                         for (int x = 0; x < dist; x++)
                         {
-                            Int2 toChange = nextPos - sign * x * Int2.Right;
+                            Int2 toChange = robotInstructionPosition - sign * x * Int2.Right;
                             Int2 from = new Int2(toChange.x - sign * 1, toChange.y);
                             char fromCharr = map.grid[from.x, from.y];
                             map.grid[toChange.x, toChange.y] = fromCharr;
                         }
 
-                        // new robot position
+                        // Move robot
                         position += instruction;
-                        map.grid[position.x, position.y] = '.';
                     }
                 }
                 else if (instruction == Int2.Up || instruction == Int2.Down)
                 {
                     // Up and down movement of boxes
-                    //nextPos = position + instruction;
-                    //nextChar = map.grid[nextPos.x, nextPos.y];
-
 
                     (Int2 left, Int2 right) firstBox = (Int2.Zero, Int2.Zero);
+
                     // Establish the first box
-                    if (nextChar == '[')
+                    if (robotInstructionChar == '[')
                     {
-                        firstBox.left = nextPos;
-                        firstBox.right = nextPos + Int2.Right;
+                        firstBox.left = robotInstructionPosition;
+                        firstBox.right = robotInstructionPosition + Int2.Right;
                     }
-                    else if (nextChar == ']')
+                    else if (robotInstructionChar == ']')
                     {
-                        firstBox.left = nextPos + Int2.Left;
-                        firstBox.right = nextPos;
+                        firstBox.left = robotInstructionPosition + Int2.Left;
+                        firstBox.right = robotInstructionPosition;
                     }
 
 
+                    // This contains all the groups of boxes.
+                    //  [][][] <- allBoxes[2], 3 boxes
+                    //   [][]  <- allBoxes[1], 2 boxes
+                    //    []   <- allBoxes[0], 1 box
+                    //    @    <- robot
+                    List<List<(Int2 left, Int2 right)>> allBoxes = new List<List<(Int2 left, Int2 right)>>();
 
-                    List<(Int2 left, Int2 right)> allBoxes = new List<(Int2 left, Int2 right)>();
-                    Stack<(Int2 left, Int2 right)> boxStack = new Stack<(Int2 left, Int2 right)>();
-                    boxStack.Push(firstBox);
-                    allBoxes.Add(firstBox);
+                    // Contains all boxes in one group.
+                    Stack<List<(Int2 left, Int2 right)>> boxStack = new Stack<List<(Int2 left, Int2 right)>>();
 
-                    Int2 nextPosLeft, nextPosRight;
-                    char nextLeftChar, nextRightChar;
+                    // First group is just the one first box
+                    boxStack.Push([firstBox]);
+                    allBoxes.Add([firstBox]);
+
+                    List<Int2> nextPositionsLeft, nextPositionsRight;
+                    List<char> nextLeftChar, nextRightChar;
 
                     do
                     {
-                        var box = boxStack.Pop();
-                        //allBoxes.Add(box);
+                        var boxGroup = boxStack.Pop();
 
-                        nextPosLeft = box.left + instruction;
-                        nextPosRight = box.right + instruction;
+                        // For all boxes in the group, this is the next positions of their left respective right sides, in the direction of the instruction
+                        nextPositionsLeft = boxGroup.Select(x => x.left + instruction).ToList();
+                        nextPositionsRight = boxGroup.Select(x => x.right + instruction).ToList();
 
-                        nextLeftChar = map.grid[nextPosLeft.x, nextPosLeft.y];
-                        nextRightChar = map.grid[nextPosRight.x, nextPosRight.y];
+                        // The chars tied to the positions above
+                        nextLeftChar = nextPositionsLeft.Select(box => map.grid[box.x, box.y]).ToList();
+                        nextRightChar = nextPositionsRight.Select(box => map.grid[box.x, box.y]).ToList();
 
-                        if (nextLeftChar == '#' || nextRightChar == '#')
+                        // If any next chars are '#' we've hit a wall and we cannot push.
+                        if (nextLeftChar.Contains('#') || nextRightChar.Contains('#'))
                             return;
-                        else if (nextLeftChar == '.' && nextRightChar == '.')
+
+                        // Look in front of all boxes in this group.
+                        // We add all new boxes found in the direction of the instruction to the below list.
+                        // At the end we add all boxes in the below list to allBoxes and the box stack so we can
+                        // track what boxgroup we found and what we need to keep searching from.
+                        List<(Int2 left, Int2 right)> boxesToAddThisIteration = new List<(Int2 left, Int2 right)>();
+                        for (int i = 0; i < nextLeftChar.Count; i++)
                         {
-                            // We have a specail case:
-                            //   ##
-                            //    [][]      If the robot pushes the three boxes up, the left of the double
-                            //     []       boxes will not be looked ahead of. Meaning, the system doesnt
-                            //      @       see the '#' that is in the way and still moves the stack.
-                            // We handle this here:
-                            foreach (var item in allBoxes)
+                            Int2 pl = nextPositionsLeft[i];
+                            char cl = nextLeftChar[i];
+
+                            Int2 pr = nextPositionsRight[i];
+                            char cr = nextRightChar[i];
+
+                            // Two cases: either you have 1 box, or 2 boxes.
+                            // If one box, track if it is offset to neither direction, to the left, or to the right.
+
+                            Int2 offset = Int2.Zero;
+                            bool doubleBox = false;
+                            
+                            if (cl == '.' && cr == '[') // If single box to the right
+                                offset = Int2.Right;
+                            else if (cl == ']' && cr == '.') // If single box to the left
+                                offset = Int2.Left;
+                            else if (cl == ']' && cr == '[') // If double box
+                                doubleBox = true;
+                            else if (cl == '.' && cr == '.') // If clear in front, dont add anything
+                                continue;
+
+                            if (doubleBox)
                             {
-                                Int2 lp = item.left + instruction;
-                                char cl = map.grid[lp.x, lp.y];
-                                Int2 rp = item.right + instruction;
-                                char cr = map.grid[rp.x, rp.y];
+                                (Int2 left, Int2 right) leftBox = (pl + Int2.Left, pr + Int2.Left);
+                                (Int2 left, Int2 right) rightBox = (pl + Int2.Right, pr + Int2.Right);
 
-                                if (cl == '#' || cr == '#') return;
+                                // In some cases we might add a box twice, so we ensure there are no duplicates
+                                if (!boxesToAddThisIteration.Contains(leftBox))
+                                    boxesToAddThisIteration.Add(leftBox);
+                                if (!boxesToAddThisIteration.Contains(rightBox))
+                                    boxesToAddThisIteration.Add(rightBox);
                             }
-
-
-                            // If we find empty spot, we move ALL previous boxes in the instruction direction
-                            for (int i = allBoxes.Count - 1; i >= 0; i--)
+                            else
                             {
-                                var b = allBoxes[i];
-                                Int2 leftTo = b.left + instruction;
-                                Int2 rightTo = b.right + instruction;
+                                (Int2 left, Int2 right) nextBox = (pl + offset, pr + offset);
 
-                                map.grid[leftTo.x, leftTo.y] = map.grid[b.left.x, b.left.y];
-                                map.grid[rightTo.x, rightTo.y] = map.grid[b.right.x, b.right.y];
-
-                                map.grid[b.left.x, b.left.y] = '.';
-                                map.grid[b.right.x, b.right.y] = '.';
+                                // In some cases we might add a box twice, so we ensure there are no duplicates
+                                if (!boxesToAddThisIteration.Contains(nextBox))
+                                    boxesToAddThisIteration.Add(nextBox);
                             }
-                            position += instruction;
-                            return;
                         }
-
-                        Int2 offset = Int2.Zero;
-                        bool doubleBox = false;
-                        if (nextLeftChar == '.' && nextRightChar == '[')
-                            offset = Int2.Right;
-                        else if (nextLeftChar == ']' && nextRightChar == '.')
-                            offset = Int2.Left;
-                        else if (nextLeftChar == ']' && nextRightChar == '[')
-                            doubleBox = true;
-
-                        if (doubleBox)
+                        if (boxesToAddThisIteration.Count > 0)
                         {
-                            (Int2 left, Int2 right) leftBox = (nextPosLeft + Int2.Left, nextPosRight + Int2.Left);
-                            (Int2 left, Int2 right) rightBox = (nextPosLeft + Int2.Right, nextPosRight + Int2.Right);
-
-                            boxStack.Push(leftBox);
-                            allBoxes.Add(leftBox);
-
-                            boxStack.Push(rightBox);
-                            allBoxes.Add(rightBox);
-
-                            continue;
+                            allBoxes.Add(boxesToAddThisIteration);
+                            boxStack.Push(boxesToAddThisIteration);
                         }
-                        else
+                    } while (boxStack.Count > 0);
+
+
+                    // We end the above do-while when we've found all boxes that exist.
+
+                    for (int boxGroupID = allBoxes.Count-1; boxGroupID >= 0; boxGroupID--)
+                    {
+                        // Grab the next group of boxes
+                        var boxGroup = allBoxes[boxGroupID];
+
+                        for (int boxID = 0; boxID < boxGroup.Count; boxID++)
                         {
-                            // offset
-                            (Int2 left, Int2 right) nextBox = (nextPosLeft + offset, nextPosRight + offset);
+                            // Grab the next box in the current box group
+                            var box = boxGroup[boxID];
 
-                            boxStack.Push(nextBox);
-                            allBoxes.Add(nextBox);
+                            Int2 leftTo = box.left + instruction;
+                            Int2 rightTo = box.right + instruction;
 
-                            continue;
+                            // Copy map values to the moved position
+                            map.grid[leftTo.x, leftTo.y] = map.grid[box.left.x, box.left.y];
+                            map.grid[rightTo.x, rightTo.y] = map.grid[box.right.x, box.right.y];
+
+                            // Clear the previous position
+                            map.grid[box.left.x, box.left.y] = '.';
+                            map.grid[box.right.x, box.right.y] = '.';
                         }
-
-
-                        //box = (nextPosLeft + offset, nextPosRight + offset); // Update what will be the next box
-                    } while (boxStack.Count > 0); //(nextLeftChar != '#' || nextRightChar != '#');
-                    
+                    }
+                    position += instruction;
                 }
-                
-
-
-
-
             }
-
         }
 
         (DataMap<char> map, Robot robot, List<Int2> instructions) ParseP1(string[] rows)
