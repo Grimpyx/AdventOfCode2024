@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.Metrics;
 using System.Drawing;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace AdventOfCode2024.Days
 {
@@ -102,281 +103,103 @@ namespace AdventOfCode2024.Days
 
         public void RunSecondStar(DayDataType fullOrSimpleData)
         {
-            (Node startNode, Int2 goal, DataMap<char> map) parseOutput = Parse(DataLoader.LoadRowData(16, fullOrSimpleData));
+            // Parse input
+            (Node startNode, Int2 goal, DataMap<char> charMap) = Parse(DataLoader.LoadRowData(16, fullOrSimpleData));
 
-            // Draw
-            int cursorMapTop = Console.CursorTop;
-            DrawMap(parseOutput.map);
-            int cursorMapBottom = Console.CursorTop;
+            // Draw map
+            int cursorTopStart = Console.CursorTop;
+            DrawMap(charMap);
+            int cursorTopEnd = Console.CursorTop;
 
-            PriorityQueue<Node, int> openQueue = new PriorityQueue<Node, int>();
-            openQueue.Enqueue(parseOutput.startNode, parseOutput.startNode.Cost);
-
-            HashSet<Int2> visited = new HashSet<Int2>();
-
-            // Find optimal path
-            Node? endPath = null;
-            while (openQueue.Count > 0)
-            {
-                Node current = openQueue.Dequeue();
-                visited.Add(current.Position);
-
-                if (fullOrSimpleData == DayDataType.Simple)
-                {
-                    Console.SetCursorPosition(0 + current.Position.x, cursorMapTop + current.Position.y);
-                    TextUtilities.CFW("@DGe.");
-                    if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(1);
-                }
-
-                if (current.Position == parseOutput.goal)
-                {
-                    endPath = current;
-                    continue;
-                }
-
-                // Queue next
-                var adjacents = parseOutput.map.GetAllAdjacentPositions(current.Position);
-                foreach (var adjacent in adjacents)
-                {
-                    if (parseOutput.map.grid[adjacent.x, adjacent.y] == '#') continue;
-
-                    if (visited.Contains(adjacent)) continue;
-
-                    if (adjacent == current.Position + current.Facing) // Open space forward
-                    {
-                        Node n = new Node(adjacent, current.Facing, current.Cost + 1, current);
-                        openQueue.Enqueue(n, n.Cost);
-
-                        continue;
-                    }
-
-                    Int2 cw = current.Facing.GetRotated90Clockwise(1);
-                    Int2 ccw = current.Facing.GetRotated90Clockwise(3);
-
-                    if (adjacent == current.Position + cw) // Rotate
-                    {
-                        Node n = new Node(current.Position, cw, current.Cost + 1000, current);
-                        openQueue.Enqueue(n, n.Cost);
-                    }
-
-                    if (adjacent == current.Position + ccw) // Rotate
-                    {
-                        Node n = new Node(current.Position, ccw, current.Cost + 1000, current);
-                        openQueue.Enqueue(n, n.Cost);
-                    }
-                }
-            }
+            // Queue lists
+            Queue<Node> queue = new Queue<Node>();
+            List<Node> allShortestPathsToGoal = new List<Node>();
             
-            Node t = endPath!;
+            DataMap<int> scoreMap = new DataMap<int>(charMap.Dim, 0);
+            scoreMap.grid[startNode.Position.x, startNode.Position.y] = 0;
 
-            //List<Node> alternateNodes = new List<Node>();
-            //visitedDict.TryAdd((current.Position, current.Facing), current.Cost);
-            Dictionary<(Int2 pos, Int2 dir), int> visitedDict = new Dictionary<(Int2 pos, Int2 dir), int>();
-            List<Node> nodesInOrder = new List<Node>();
 
-            // Draws the path
-            while (t != null)
+            //HashSet<Int2> visited = new HashSet<Int2>();
+            //Dictionary<Int2, int> visitedScore = new Dictionary<Int2, int>();
+            int lowestScore = int.MaxValue;
+
+            queue.Enqueue(startNode);
+
+            while (queue.Count > 0)
             {
-                nodesInOrder.Add(t);
-                visitedDict.Add((t.Position, t.Facing), t.Cost);
-                
-                // Dont draw if you hit a turn (only asthetic)
-                if (t.Parent != null && t.Position == t.Parent.Position)
+                Node node = queue.Dequeue();
+
+                // Thanks for this idea, Ryan
+                Walk(node.Facing, node.Cost + 1);
+                Walk(node.Facing.GetRotated90Clockwise(1), node.Cost + 1001);
+                Walk(node.Facing.GetRotated90Clockwise(3), node.Cost + 1001);
+
+                void Walk(Int2 direction, int cost)
                 {
-                    t = t.Parent!;
-                    continue;
+                    Int2 pos = node.Position + direction;
+                    char c = charMap.grid[pos.x, pos.y];
+
+                    // Always do nothing if we hit a wall
+                    if (c == '#')
+                        return;
+
+
+                    // If we find the goal we add the path to the list of paths
+                    // If we find a path that is shorter than the other ones, we
+                    // clear the list.
+                    if (pos == goal)
+                    {
+                        if (cost <= lowestScore)
+                        {
+                            // If we found a path to the goal that was shorter
+                            if (cost < lowestScore)
+                            {
+                                allShortestPathsToGoal.Clear();
+                                lowestScore = cost;
+                            }
+                            allShortestPathsToGoal.Add(node);
+                        }
+                        return; // Don't add anything to the queue if we found the end
+                    }
+
+                    // The next step is to see if the position has already been visited.
+                    // For some reason it has to be the position + direction (next position in front)
+                    // "Int2 position = pos;" became
+                    // "Int2 positionInFront = pos + direction;"
+                    // I changed that because I discovered almost no places share the same cost/score.
+
+                    Int2 positionInFront = pos + direction;
+                    int scoreMapValueInFront = scoreMap.grid[positionInFront.x, positionInFront.y];
+
+                    // If is unvisited, we give it a cost
+                    if (scoreMapValueInFront == 0 || cost < scoreMapValueInFront)
+                        scoreMap.grid[pos.x, pos.y] = cost;
+
+                    // If we have a higher cost we have a shorter path there
+                    else if (cost > scoreMapValueInFront)
+                        return;
+
+                    scoreMap.grid[pos.x, pos.y] = cost;
+                    queue.Enqueue(new Node(pos, direction, cost, node));
                 }
-
-                Console.SetCursorPosition(t.Position.x, cursorMapTop + t.Position.y);
-                char c = '%';
-                if (t.Facing == Int2.Up) c = '^';
-                else if (t.Facing == Int2.Right) c = '>';
-                else if (t.Facing == Int2.Left) c = '<';
-                else if (t.Facing == Int2.Down) c = 'v';
-
-                TextUtilities.CFW("@DGe" + c);
-                t = t.Parent!;
-
-                if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(2);
             }
 
-            // We try to walk from each crossroad and see if we can reunite with any part of the path
-            List<Node> alternateNodes = new List<Node>();
-            HashSet<Int2> positionsFromBefore = new HashSet<Int2>(); // Keep a list of forbidden places
-            for (int i = nodesInOrder.Count-1; i >= 0 ; i--)
+            // Draw all shortest paths and count unique places
+            HashSet<Int2> uniquePositions = new HashSet<Int2>() { goal };
+            foreach (var shortestPath in allShortestPathsToGoal)
             {
-                Node currentStartNode = nodesInOrder[i];
-
-                // Add the previous position to list
-                if (currentStartNode.Parent != null)
-                    positionsFromBefore.Add(currentStartNode.Parent.Position);
-
-                openQueue.Clear();
-                openQueue.Enqueue(currentStartNode, currentStartNode.Cost);
-
-                // Step on the map
-                do
-                {
-                    Node curNode = openQueue.Dequeue();
-
-                    if (positionsFromBefore.Contains(curNode.Position))
-                        continue;
-                    if (curNode.Cost > endPath!.Cost)
-                        continue;
-
-
-                    /*if (curNode.Parent != null &&
-                        curNode.Parent.Parent != null &&
-                        curNode.Cost == curNode.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
-                        continue;*/
-
-                    // If the next node exists in the dictionary, it means we've hit
-                    // the shortest path
-                    if (curNode != currentStartNode && visitedDict.TryGetValue((curNode.Position, curNode.Facing), out int existingCost))
-                    {
-                        if (curNode.Parent == currentStartNode)
-                            continue;
-
-                        if (curNode.Cost == existingCost)
-                        {
-                            alternateNodes.Add(curNode);
-                            continue;
-                        }
-
-                        else if (curNode.Cost > existingCost)
-                            continue;
-                    }
-
-                    // Draw progress
-                    /*if (fullOrSimpleData == DayDataType.Simple)
-                    {
-                        Console.SetCursorPosition(0 + curNode.Position.x, cursorMapTop + curNode.Position.y);
-                        //if (curNode == currentStartNode)
-                        //    TextUtilities.CFW("@Mgn+");
-                        //else TextUtilities.CFW("@DRe+");
-                        //TextUtilities.CFW("@DRe+");
-                    }*/
-
-                    Console.SetCursorPosition(curNode.Position.x, cursorMapTop + curNode.Position.y);
-                    TextUtilities.CFW("@RedO");
-
-                    var adjacents = parseOutput.map.GetAllAdjacentPositions(curNode.Position);
-                    foreach (var adjacent in adjacents)
-                    {
-                        if (parseOutput.map.grid[adjacent.x, adjacent.y] == '#')
-                            continue;
-
-                        if (positionsFromBefore.Contains(adjacent))
-                            continue; // don't add anything else if we've already been here
-
-                        if (adjacent == curNode.Position + curNode.Facing) // Open space forward
-                        {
-                            Node n = new Node(adjacent, curNode.Facing, curNode.Cost + 1, curNode);
-
-                            if (n.Parent != null &&
-                                n.Parent.Parent != null &&
-                                n.Cost == n.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
-                                continue;
-
-                            openQueue.Enqueue(n, n.Cost);
-
-                            continue;
-                        }
-
-                        Int2 cw  = curNode.Facing.GetRotated90Clockwise(1);
-                        Int2 ccw = curNode.Facing.GetRotated90Clockwise(3);
-
-                        if (adjacent == curNode.Position + cw) // Rotate right
-                        {
-                            Node n = new Node(curNode.Position, cw, curNode.Cost + 1000, curNode);
-
-                            if (n.Parent != null &&
-                                n.Parent.Parent != null &&
-                                n.Cost == n.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
-                                continue;
-
-                            openQueue.Enqueue(n, n.Cost);
-                        }
-
-                        if (adjacent == curNode.Position + ccw) // Rotate left
-                        {
-                            Node n = new Node(curNode.Position, ccw, curNode.Cost + 1000, curNode);
-
-                            if (n.Parent != null &&
-                                n.Parent.Parent != null &&
-                                n.Cost == n.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
-                                continue;
-
-                            openQueue.Enqueue(n, n.Cost);
-                        }
-                    }
-
-
-                } while (openQueue.Count > 0);
-            }
-
-
-            HashSet<Int2> allPlaces = new HashSet<Int2>(positionsFromBefore) { endPath!.Position };
-            for (int i = 0; i < alternateNodes.Count; i++)
-            {
-                t = alternateNodes[i];
-
+                Node t = shortestPath;
                 string color = TextUtilities.RandomColor();
-                bool firstNode = true;
                 while (t != null)
                 {
-                    // Dont draw if you hit a turn (only asthetic)
-                    if (t.Parent != null && t.Position == t.Parent.Position)
-                    {
-                        t = t.Parent!;
-                        continue;
-                    }
-
-                    // If we hit the main path, we don't need to draw or collect more path parts
-                    if(!firstNode && visitedDict.ContainsKey((t.Position, t.Facing)))
-                    {
-                        break;
-                    }
-
-                    allPlaces.Add(t.Position);
-
-                    // True on first iteration.
-                    if (firstNode) firstNode = false;
-
-                    Console.SetCursorPosition(t.Position.x, cursorMapTop + t.Position.y);
-                    char c = '%';
-                    if (t.Facing == Int2.Up) c = '^';
-                    else if (t.Facing == Int2.Right) c = '>';
-                    else if (t.Facing == Int2.Left) c = '<';
-                    else if (t.Facing == Int2.Down) c = 'v';
-
-                    TextUtilities.CFW(color + c);
-
+                    Console.SetCursorPosition(t.Position.x, cursorTopStart + t.Position.y);
+                    TextUtilities.CFW(color + 'X');
+                    uniquePositions.Add(t.Position);
                     t = t.Parent!;
-
-                    if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(2);
-
                 }
-                if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(100);
             }
-
-            if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(2000);
-            foreach (var item in allPlaces)
-            {
-                Console.SetCursorPosition(item.x, cursorMapTop + item.y);
-                TextUtilities.CFW("@RedO");
-            }
-            if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(3000);
-
-
-
-            Console.SetCursorPosition(parseOutput.startNode!.Position.x, cursorMapTop + parseOutput.startNode.Position.y);
-            TextUtilities.CFW("@RedS");
-            Console.SetCursorPosition(parseOutput.goal.x, cursorMapTop + parseOutput.goal.y);
-            TextUtilities.CFW("@RedE");
-            Console.SetCursorPosition(0, cursorMapBottom);
-            //TextUtilities.CFWLine($"@Gra >>> Lowest cost to node: @Yel{endNode!.Cost}");
-            TextUtilities.CFWLine($"@Gra >>> Spots to visit: @Yel{allPlaces.Count}");
+            Console.SetCursorPosition(0, cursorTopEnd);
+            TextUtilities.CFWLine("@Gra >>> Total unique places: @Yel" + uniquePositions.Count);
         }
 
         record Node(Int2 Position, Int2 Facing, int Cost, Node? Parent);
@@ -412,8 +235,6 @@ namespace AdventOfCode2024.Days
                     char c = data[y][x];
                     if (c == '#')
                         grid[x, y] = '#';
-                    else if (c == '.')
-                        grid[x, y] = '.';
                     else if (c == 'E')
                     {
                         goal = new Int2(x, y);
@@ -424,6 +245,8 @@ namespace AdventOfCode2024.Days
                         startNode = new Node(new Int2(x, y), Int2.Right, 0, null);
                         grid[x, y] = '.';
                     }
+                    else
+                        grid[x, y] = c;
                 }
             }
 
