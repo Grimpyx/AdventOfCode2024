@@ -125,7 +125,7 @@ namespace AdventOfCode2024.Days
                 {
                     Console.SetCursorPosition(0 + current.Position.x, cursorMapTop + current.Position.y);
                     TextUtilities.CFW("@DGe.");
-                    Thread.Sleep(1);
+                    if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(1);
                 }
 
                 if (current.Position == parseOutput.goal)
@@ -166,8 +166,6 @@ namespace AdventOfCode2024.Days
                     }
                 }
             }
-
-            HashSet<Int2> allPlaces = new HashSet<Int2>();
             
             Node t = endPath!;
 
@@ -199,23 +197,19 @@ namespace AdventOfCode2024.Days
                 TextUtilities.CFW("@DGe" + c);
                 t = t.Parent!;
 
-                Thread.Sleep(2);
+                if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(2);
             }
 
             // We try to walk from each crossroad and see if we can reunite with any part of the path
             List<Node> alternateNodes = new List<Node>();
-            HashSet<Node> visitedNodes = new HashSet<Node>();
             HashSet<Int2> positionsFromBefore = new HashSet<Int2>(); // Keep a list of forbidden places
             for (int i = nodesInOrder.Count-1; i >= 0 ; i--)
             {
                 Node currentStartNode = nodesInOrder[i];
 
+                // Add the previous position to list
                 if (currentStartNode.Parent != null)
                     positionsFromBefore.Add(currentStartNode.Parent.Position);
-
-                //Thread.Sleep(1000);
-                //Console.SetCursorPosition(0, cursorMapTop);
-                //DrawMap(parseOutput.map);
 
                 openQueue.Clear();
                 openQueue.Enqueue(currentStartNode, currentStartNode.Cost);
@@ -224,16 +218,17 @@ namespace AdventOfCode2024.Days
                 do
                 {
                     Node curNode = openQueue.Dequeue();
+
                     if (positionsFromBefore.Contains(curNode.Position))
                         continue;
                     if (curNode.Cost > endPath!.Cost)
                         continue;
 
 
-                    if (curNode.Parent != null &&
+                    /*if (curNode.Parent != null &&
                         curNode.Parent.Parent != null &&
                         curNode.Cost == curNode.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
-                        continue;
+                        continue;*/
 
                     // If the next node exists in the dictionary, it means we've hit
                     // the shortest path
@@ -253,13 +248,17 @@ namespace AdventOfCode2024.Days
                     }
 
                     // Draw progress
-                    if (fullOrSimpleData == DayDataType.Simple)
+                    /*if (fullOrSimpleData == DayDataType.Simple)
                     {
                         Console.SetCursorPosition(0 + curNode.Position.x, cursorMapTop + curNode.Position.y);
-                        if (curNode == currentStartNode)
-                            TextUtilities.CFW("@Mgn+");
-                        else TextUtilities.CFW("@DRe+");
-                    }
+                        //if (curNode == currentStartNode)
+                        //    TextUtilities.CFW("@Mgn+");
+                        //else TextUtilities.CFW("@DRe+");
+                        //TextUtilities.CFW("@DRe+");
+                    }*/
+
+                    Console.SetCursorPosition(curNode.Position.x, cursorMapTop + curNode.Position.y);
+                    TextUtilities.CFW("@RedO");
 
                     var adjacents = parseOutput.map.GetAllAdjacentPositions(curNode.Position);
                     foreach (var adjacent in adjacents)
@@ -272,13 +271,12 @@ namespace AdventOfCode2024.Days
 
                         if (adjacent == curNode.Position + curNode.Facing) // Open space forward
                         {
-                            //if (visited.Contains(curNode.Position + curNode.Facing))
-                                //continue;
-
                             Node n = new Node(adjacent, curNode.Facing, curNode.Cost + 1, curNode);
 
-                            //if (currentStartNode == n.Parent && nodesInOrder.Contains(n)) 
-                            //    continue;
+                            if (n.Parent != null &&
+                                n.Parent.Parent != null &&
+                                n.Cost == n.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
+                                continue;
 
                             openQueue.Enqueue(n, n.Cost);
 
@@ -291,8 +289,11 @@ namespace AdventOfCode2024.Days
                         if (adjacent == curNode.Position + cw) // Rotate right
                         {
                             Node n = new Node(curNode.Position, cw, curNode.Cost + 1000, curNode);
-                            //if (currentStartNode == n.Parent && nodesInOrder.Contains(n))
-                            //    continue;
+
+                            if (n.Parent != null &&
+                                n.Parent.Parent != null &&
+                                n.Cost == n.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
+                                continue;
 
                             openQueue.Enqueue(n, n.Cost);
                         }
@@ -300,8 +301,11 @@ namespace AdventOfCode2024.Days
                         if (adjacent == curNode.Position + ccw) // Rotate left
                         {
                             Node n = new Node(curNode.Position, ccw, curNode.Cost + 1000, curNode);
-                            //if (currentStartNode == n.Parent && nodesInOrder.Contains(n))
-                            //    continue;
+
+                            if (n.Parent != null &&
+                                n.Parent.Parent != null &&
+                                n.Cost == n.Parent.Parent.Cost + 2000) // have rotated at least twice in a row
+                                continue;
 
                             openQueue.Enqueue(n, n.Cost);
                         }
@@ -311,14 +315,33 @@ namespace AdventOfCode2024.Days
                 } while (openQueue.Count > 0);
             }
 
+
+            HashSet<Int2> allPlaces = new HashSet<Int2>(positionsFromBefore) { endPath!.Position };
             for (int i = 0; i < alternateNodes.Count; i++)
             {
                 t = alternateNodes[i];
 
+                string color = TextUtilities.RandomColor();
+                bool firstNode = true;
                 while (t != null)
                 {
-                    //nodesInOrder.Add(t);
-                    //visitedDict.Add((t.Position, t.Facing), t.Cost);
+                    // Dont draw if you hit a turn (only asthetic)
+                    if (t.Parent != null && t.Position == t.Parent.Position)
+                    {
+                        t = t.Parent!;
+                        continue;
+                    }
+
+                    // If we hit the main path, we don't need to draw or collect more path parts
+                    if(!firstNode && visitedDict.ContainsKey((t.Position, t.Facing)))
+                    {
+                        break;
+                    }
+
+                    allPlaces.Add(t.Position);
+
+                    // True on first iteration.
+                    if (firstNode) firstNode = false;
 
                     Console.SetCursorPosition(t.Position.x, cursorMapTop + t.Position.y);
                     char c = '%';
@@ -327,17 +350,23 @@ namespace AdventOfCode2024.Days
                     else if (t.Facing == Int2.Left) c = '<';
                     else if (t.Facing == Int2.Down) c = 'v';
 
-                    TextUtilities.CFW("@Mgn" + c);
+                    TextUtilities.CFW(color + c);
 
-                    if (t.Parent != null && t.Position == t.Parent.Position) // in a turn
-                        t = t.Parent.Parent!;
-                    else
-                        t = t.Parent!;
+                    t = t.Parent!;
 
-                    Thread.Sleep(500);
+                    if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(2);
+
                 }
+                if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(100);
             }
-            Thread.Sleep(5000);
+
+            if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(2000);
+            foreach (var item in allPlaces)
+            {
+                Console.SetCursorPosition(item.x, cursorMapTop + item.y);
+                TextUtilities.CFW("@RedO");
+            }
+            if (fullOrSimpleData == DayDataType.Simple) Thread.Sleep(3000);
 
 
 
