@@ -52,20 +52,25 @@ namespace AdventOfCode2024.Days
         public void RunSecondStar(DayDataType fullOrSimpleData)
         {
             // My first idea was to do the same as part one, but keep a record of what has been done to split.
-            // This proved kind of difficult. I only managed to find some solutions. My method:
+            // This proved kind of difficult. I only managed to find some solutions.
+            // My method:
             // I keep a history of all parts that were ever removed, starting with only small parts.
             // This ensures I get the most parts possible. Then I sort them in size order (longer patterns first)
-            // and reconstruct the original design, but with the parts
-            // brrwggg => b r gg rwg => rwg gg b r
+            // and reconstruct the original design, but divided into the parts
+            // brrrwggg => (unpredictible order) r rwg gg br => rwg gg br r => br r rwg gg
             // With this I can start to try and combine the small parts into bigger parts. If it succeeds, we have found
-            // another way to build the design, rwg gg b r => rwg gg br
+            // another way to build the design
+            // "br r rwg gg" could become "brr rwg gg", or "br rrwg gg", or "br r rwggg"
             // I decided to not continue on this, but it should work in theory if you keep doing this recursively.
 
             // Instead I looked at a user "zniperr"'s solution
             // https://www.reddit.com/r/adventofcode/comments/1hhlb8g/comment/m3f681k/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
-            // I initially did a splitting method. Parts one by one from the front, much more elegant.
+            // I initially did a splitting method. Zniperr strips away patterns one by one from the front and then
+            // keeps recursively doing the same on the next. Much more elegant. If a part ever becomes empty, it
+            // returns 1. This represents 1 way to split it all up. Because we do this recursively, we collect all
+            // the ones.
 
-            // 1041529704688380
+            // 1041529704688380 correct!
 
             string[] data = DataLoader.LoadRowData(19, fullOrSimpleData);
             string[] designs = data[2..];
@@ -77,219 +82,65 @@ namespace AdventOfCode2024.Days
             long amountSolvable = 0;
             foreach (var design in designs)
             {
-                long res = GetTimesSolvable(design, towels);
-                if (res == 0)
-                {
-                    //TextUtilities.CFWLine("@DReUnsolvable: @Yel" + design + "@Gra");
-                }
-                else
-                {
-                    //TextUtilities.CFWLine("@GreSolvable:   @Yel" + design.PadRight(70) + "@GraVariations: @Yel" + res);
-                    amountSolvable += res;
-                }
-
-                // My previous solution
-                /*(bool solvable, List<string> parts) = IsSolvableP2(design, towels);
-
-                TextUtilities.CFWLine("@Mgn" + new string('-', Console.WindowWidth) + "@Gra");
-                if (!solvable)
+                long result = GetTimesSolvable(design, towels);
+                if (result == 0)
                 {
                     TextUtilities.CFWLine("@DReUnsolvable: @Yel" + design + "@Gra");
                 }
                 else
                 {
-                    TextUtilities.CFWLine("@Gre" + design + "@Gra");
-                    //int add = GetUniqueVariations(design, parts);
-                    TextUtilities.CFWLine("@GreSolvable:   @Yel" + design.PadRight(70) + "@GraVariations: @Yel" + add);
-                    amountSolvable += add;
-                }*/
+                    TextUtilities.CFWLine("@GreSolvable:   @Yel" + design.PadRight(65) + "@GraVariations: @Yel" + result);
+                    amountSolvable += result;
+                }
             }
 
             TextUtilities.CFWLine("@Gra >>> Number of solvable: @Yel" + amountSolvable);
-
-            int GetUniqueVariations(string goalDesign, List<string> parts)
-            {
-                // Since the list of parts only says what appears at least once, in no particular order,
-                // we have to sort it and rebuild the goal design with its smallest parts
-                parts = parts.OrderBy(x => -x.Length).ToList();
-
-                // Moving wave that gets larger
-                int unique = 1;
-                List<(string part, int index)> partIndexList = new List<(string part, int index)>();
-                HashSet<int> indexesToSkip = new HashSet<int>();
-                foreach (var part in parts)
-                {
-                    for (int charIndex = 0; charIndex < goalDesign.Length - part.Length + 1; charIndex++)
-                    {
-                        if (indexesToSkip.Contains(charIndex)) continue;
-
-                        string s = goalDesign[charIndex..(charIndex + part.Length)];
-                        if (s == part)
-                        {
-                            partIndexList.Add((s, charIndex));
-                            for (int i = 0; i < part.Length; i++)
-                            {
-                                indexesToSkip.Add(charIndex + i);
-                            }
-                        }
-                    }
-                }
-                Console.WriteLine("Parts:            " + string.Join(',', parts));
-                Console.WriteLine("Parts with index: " + string.Join(',', partIndexList));
-                parts = partIndexList.OrderBy(x => x.index).Select(x => x.part).ToList();
-                Console.WriteLine("Order by index:   " + string.Join(',', parts));
-
-                // 0123456
-                // ---VVV   (width 2, i 3)
-                // ubwgrbb  (does grb exist in towel pattern list?)
-                for (int width = 1; width < parts.Count; width++) // Grow scan area
-                {
-                    for (int i = 0; i < parts.Count - width; i++)
-                    {
-                        string join = string.Join("", parts[i..(i + width+1)]);
-
-                        // If it exists in the list of available patterns add one to unique
-                        for (int j = 0; j < towels.Length; j++)
-                        {
-                            if (towels[j].Length == join.Length)
-                            {
-                                if (towels[j] == join)
-                                {
-                                    TextUtilities.CFWLine($"@Gre{string.Join(',', parts[i..(i + width+1)])}@Gra => @Gre{join}");
-                                    unique++;
-                                }
-                            }
-                        }
-                    }
-                }
-                return unique;
-            }
         }
 
-        private static Dictionary<string, bool> memoP1 = new Dictionary<string, bool>();
-        private static Dictionary<string, (bool result, List<string> parts)> memoP2 = new Dictionary<string, (bool result, List<string> parts)>();
-
-        private static Dictionary<string, long> memoP22 = new Dictionary<string, long>();
+        private readonly Dictionary<string, bool> memoP1 = new Dictionary<string, bool>();
+        private readonly Dictionary<string, long> memoP2 = new Dictionary<string, long>();
 
         long GetTimesSolvable(string design, string[] towelsInput)
         {
-            //memoP22.Clear();
+            //memoP2.Clear();
 
             return TimesSolvable(design);
 
             long TimesSolvable(string design)
             {
-                if (memoP22.ContainsKey(design))
-                    return memoP22[design];
+                // Memoization to make it super fast
+                // This means we remember how many solutions a
+                // particular design has. A lookup table.
+                if (memoP2.ContainsKey(design))
+                    return memoP2[design];
 
                 long result = 0;
 
-                if (design == null || design == "") return 1;
+                // If the design is empty it means we reached the end of a solvable design.
+                // We return 1.
+                if (design == "") return 1; 
 
                 for (int i = 0; i < towelsInput.Length; i++)
                 {
                     string pattern = towelsInput[i];
                     if (design.StartsWith(pattern))
                     {
+                        // If the design starts with a pattern, we remove the
+                        // pattern from the start of the design.
                         string nextDesign = design[pattern.Length..];
+
+                        // If the next design contains a solvable way we
+                        // add it to the result. When all results are
+                        // combined we will have all solvable ways.
                         result += TimesSolvable(nextDesign);
                     }
                 }
 
-                if (!memoP22.ContainsKey(design)) memoP22.Add(design, result);
+                // Memoization to make it super fast
+                if (!memoP2.ContainsKey(design))
+                    memoP2.Add(design, result);
+
                 return result;
-            }
-        }
-
-
-        (bool result, List<string> parts) IsSolvableP2(string design, string[] towelsInput)
-        {
-            // Clear memoization memory
-            memoP2.Clear();
-
-            //List<string> parts = new List<string>();
-
-            bool writeOutput = false;
-
-            return TrySplit(design);
-
-            (bool success, List<string> history) TrySplit(string d)
-            {
-                //if (memoP2.ContainsKey(d))
-                //    return memoP2[d];
-
-                bool result = false;
-                for (int i = 0; i < towelsInput.Length; i++)
-                {
-                    var split = d.Split(towelsInput[i], StringSplitOptions.RemoveEmptyEntries);
-
-                    // we managed to split away everything
-                    if (split.Length == 0)
-                    {
-                        if (writeOutput)
-                        {
-                            Console.WriteLine("Found | " + towelsInput[i]);
-                            Console.WriteLine("Rest  | NONE");
-                        }
-
-                        //memoP2.Add(d, (true, [history + d]));
-                        return (true, [towelsInput[i]]);
-                    }
-
-                    // with only one split element
-                    else if (split.Length == 1)
-                    {
-                        // if that split rest is the same as input string
-                        // we couldn't split it
-                        if (split[0] == d)
-                        {
-                            continue;
-                        }
-
-                        /////// Queue rest
-                        if (writeOutput)
-                        {
-                            Console.WriteLine("Found | " + towelsInput[i]);
-                            Console.WriteLine("Rest  | " + split[0]);
-                        }
-                        var r = TrySplit(split[0]); // , [towelsInput[i]]
-                        result |= r.success;
-                        if (result)
-                        {
-                            //memoP2.Add(d, (true, [history + towelsInput[i]]));
-                            return (true, [.. r.history, towelsInput[i]]);
-                        }
-                    }
-
-                    // If we managed to split and we get at least two parts
-                    else
-                    {
-                        if (writeOutput)
-                        {
-                            Console.WriteLine("Found | " + towelsInput[i]);
-                            Console.WriteLine("Rest  | " + string.Join('|', split));
-                        }
-                        bool temp = true;
-                        List<string> templist = new List<string>();
-                        for (int j = 0; j < split.Length; j++)
-                        {
-                            var spp = TrySplit(split[j]); //, [history + towelsInput[i]]
-                            templist.AddRange(spp.history);
-                            temp &= spp.success;
-                        }
-                        result |= temp;
-                        if (result)
-                        {
-                            //memoP2.Add(d, (true, [history + towelsInput[i]]));
-                            return (true, [.. templist, towelsInput[i]]);
-                            //memoP2.Add(d, (true, [.. history, .. r.history]));
-                            //return (true, [.. history, .. r.history]);
-                        }
-                    }
-                }
-                // Clear list of history if we ever return false
-                //memoP2.Add(d, (false, history));
-                return (false, []);
             }
         }
 
