@@ -51,14 +51,252 @@ namespace AdventOfCode2024.Days
 
         public void RunSecondStar(DayDataType fullOrSimpleData)
         {
+            // My first idea was to do the same as part one, but keep a record of what has been done to split.
+            // This proved kind of difficult. I only managed to find some solutions. My method:
+            // I keep a history of all parts that were ever removed, starting with only small parts.
+            // This ensures I get the most parts possible. Then I sort them in size order (longer patterns first)
+            // and reconstruct the original design, but with the parts
+            // brrwggg => b r gg rwg => rwg gg b r
+            // With this I can start to try and combine the small parts into bigger parts. If it succeeds, we have found
+            // another way to build the design, rwg gg b r => rwg gg br
+            // I decided to not continue on this, but it should work in theory if you keep doing this recursively.
+
+            // Instead I looked at a user "zniperr"'s solution
+            // https://www.reddit.com/r/adventofcode/comments/1hhlb8g/comment/m3f681k/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
+            // I initially did a splitting method. Parts one by one from the front, much more elegant.
+
+            // 1041529704688380
+
+            string[] data = DataLoader.LoadRowData(19, fullOrSimpleData);
+            string[] designs = data[2..];
+            string[] towels = data[0].Split(", ");
+
+            // Sorting by largest first makes the algorithm faster
+            towels = towels.OrderBy(towel => -towel.Length).ToArray();
+
+            long amountSolvable = 0;
+            foreach (var design in designs)
+            {
+                long res = GetTimesSolvable(design, towels);
+                if (res == 0)
+                {
+                    //TextUtilities.CFWLine("@DReUnsolvable: @Yel" + design + "@Gra");
+                }
+                else
+                {
+                    //TextUtilities.CFWLine("@GreSolvable:   @Yel" + design.PadRight(70) + "@GraVariations: @Yel" + res);
+                    amountSolvable += res;
+                }
+
+                // My previous solution
+                /*(bool solvable, List<string> parts) = IsSolvableP2(design, towels);
+
+                TextUtilities.CFWLine("@Mgn" + new string('-', Console.WindowWidth) + "@Gra");
+                if (!solvable)
+                {
+                    TextUtilities.CFWLine("@DReUnsolvable: @Yel" + design + "@Gra");
+                }
+                else
+                {
+                    TextUtilities.CFWLine("@Gre" + design + "@Gra");
+                    //int add = GetUniqueVariations(design, parts);
+                    TextUtilities.CFWLine("@GreSolvable:   @Yel" + design.PadRight(70) + "@GraVariations: @Yel" + add);
+                    amountSolvable += add;
+                }*/
+            }
+
+            TextUtilities.CFWLine("@Gra >>> Number of solvable: @Yel" + amountSolvable);
+
+            int GetUniqueVariations(string goalDesign, List<string> parts)
+            {
+                // Since the list of parts only says what appears at least once, in no particular order,
+                // we have to sort it and rebuild the goal design with its smallest parts
+                parts = parts.OrderBy(x => -x.Length).ToList();
+
+                // Moving wave that gets larger
+                int unique = 1;
+                List<(string part, int index)> partIndexList = new List<(string part, int index)>();
+                HashSet<int> indexesToSkip = new HashSet<int>();
+                foreach (var part in parts)
+                {
+                    for (int charIndex = 0; charIndex < goalDesign.Length - part.Length + 1; charIndex++)
+                    {
+                        if (indexesToSkip.Contains(charIndex)) continue;
+
+                        string s = goalDesign[charIndex..(charIndex + part.Length)];
+                        if (s == part)
+                        {
+                            partIndexList.Add((s, charIndex));
+                            for (int i = 0; i < part.Length; i++)
+                            {
+                                indexesToSkip.Add(charIndex + i);
+                            }
+                        }
+                    }
+                }
+                Console.WriteLine("Parts:            " + string.Join(',', parts));
+                Console.WriteLine("Parts with index: " + string.Join(',', partIndexList));
+                parts = partIndexList.OrderBy(x => x.index).Select(x => x.part).ToList();
+                Console.WriteLine("Order by index:   " + string.Join(',', parts));
+
+                // 0123456
+                // ---VVV   (width 2, i 3)
+                // ubwgrbb  (does grb exist in towel pattern list?)
+                for (int width = 1; width < parts.Count; width++) // Grow scan area
+                {
+                    for (int i = 0; i < parts.Count - width; i++)
+                    {
+                        string join = string.Join("", parts[i..(i + width+1)]);
+
+                        // If it exists in the list of available patterns add one to unique
+                        for (int j = 0; j < towels.Length; j++)
+                        {
+                            if (towels[j].Length == join.Length)
+                            {
+                                if (towels[j] == join)
+                                {
+                                    TextUtilities.CFWLine($"@Gre{string.Join(',', parts[i..(i + width+1)])}@Gra => @Gre{join}");
+                                    unique++;
+                                }
+                            }
+                        }
+                    }
+                }
+                return unique;
+            }
         }
 
-        private static Dictionary<string, bool> memo = new Dictionary<string, bool>();
+        private static Dictionary<string, bool> memoP1 = new Dictionary<string, bool>();
+        private static Dictionary<string, (bool result, List<string> parts)> memoP2 = new Dictionary<string, (bool result, List<string> parts)>();
+
+        private static Dictionary<string, long> memoP22 = new Dictionary<string, long>();
+
+        long GetTimesSolvable(string design, string[] towelsInput)
+        {
+            //memoP22.Clear();
+
+            return TimesSolvable(design);
+
+            long TimesSolvable(string design)
+            {
+                if (memoP22.ContainsKey(design))
+                    return memoP22[design];
+
+                long result = 0;
+
+                if (design == null || design == "") return 1;
+
+                for (int i = 0; i < towelsInput.Length; i++)
+                {
+                    string pattern = towelsInput[i];
+                    if (design.StartsWith(pattern))
+                    {
+                        string nextDesign = design[pattern.Length..];
+                        result += TimesSolvable(nextDesign);
+                    }
+                }
+
+                if (!memoP22.ContainsKey(design)) memoP22.Add(design, result);
+                return result;
+            }
+        }
+
+
+        (bool result, List<string> parts) IsSolvableP2(string design, string[] towelsInput)
+        {
+            // Clear memoization memory
+            memoP2.Clear();
+
+            //List<string> parts = new List<string>();
+
+            bool writeOutput = false;
+
+            return TrySplit(design);
+
+            (bool success, List<string> history) TrySplit(string d)
+            {
+                //if (memoP2.ContainsKey(d))
+                //    return memoP2[d];
+
+                bool result = false;
+                for (int i = 0; i < towelsInput.Length; i++)
+                {
+                    var split = d.Split(towelsInput[i], StringSplitOptions.RemoveEmptyEntries);
+
+                    // we managed to split away everything
+                    if (split.Length == 0)
+                    {
+                        if (writeOutput)
+                        {
+                            Console.WriteLine("Found | " + towelsInput[i]);
+                            Console.WriteLine("Rest  | NONE");
+                        }
+
+                        //memoP2.Add(d, (true, [history + d]));
+                        return (true, [towelsInput[i]]);
+                    }
+
+                    // with only one split element
+                    else if (split.Length == 1)
+                    {
+                        // if that split rest is the same as input string
+                        // we couldn't split it
+                        if (split[0] == d)
+                        {
+                            continue;
+                        }
+
+                        /////// Queue rest
+                        if (writeOutput)
+                        {
+                            Console.WriteLine("Found | " + towelsInput[i]);
+                            Console.WriteLine("Rest  | " + split[0]);
+                        }
+                        var r = TrySplit(split[0]); // , [towelsInput[i]]
+                        result |= r.success;
+                        if (result)
+                        {
+                            //memoP2.Add(d, (true, [history + towelsInput[i]]));
+                            return (true, [.. r.history, towelsInput[i]]);
+                        }
+                    }
+
+                    // If we managed to split and we get at least two parts
+                    else
+                    {
+                        if (writeOutput)
+                        {
+                            Console.WriteLine("Found | " + towelsInput[i]);
+                            Console.WriteLine("Rest  | " + string.Join('|', split));
+                        }
+                        bool temp = true;
+                        List<string> templist = new List<string>();
+                        for (int j = 0; j < split.Length; j++)
+                        {
+                            var spp = TrySplit(split[j]); //, [history + towelsInput[i]]
+                            templist.AddRange(spp.history);
+                            temp &= spp.success;
+                        }
+                        result |= temp;
+                        if (result)
+                        {
+                            //memoP2.Add(d, (true, [history + towelsInput[i]]));
+                            return (true, [.. templist, towelsInput[i]]);
+                            //memoP2.Add(d, (true, [.. history, .. r.history]));
+                            //return (true, [.. history, .. r.history]);
+                        }
+                    }
+                }
+                // Clear list of history if we ever return false
+                //memoP2.Add(d, (false, history));
+                return (false, []);
+            }
+        }
 
         bool IsSolvable(string design, string[] towelsInput)
         {
             // Clear memoization memory
-            memo.Clear();
+            memoP1.Clear();
 
             bool writeOutput = false;
             long activeTrySplit = 0;
@@ -67,8 +305,8 @@ namespace AdventOfCode2024.Days
 
             bool TrySplit(string d)
             {
-                if (memo.ContainsKey(d))
-                    return memo[d];
+                if (memoP1.ContainsKey(d))
+                    return memoP1[d];
 
                 activeTrySplit++;
 
@@ -86,7 +324,7 @@ namespace AdventOfCode2024.Days
                             Console.WriteLine("Rest  | NONE");
                         }
 
-                        memo.Add(d, true);
+                        memoP1.Add(d, true);
                         return true;
                     }
 
@@ -109,7 +347,7 @@ namespace AdventOfCode2024.Days
                         result |= TrySplit(split[0]);
                         if (result)
                         {
-                            memo.Add(d, result);
+                            memoP1.Add(d, result);
                             return result;
                         }
                     }
@@ -130,88 +368,14 @@ namespace AdventOfCode2024.Days
                         result |= temp;
                         if (result)
                         {
-                            memo.Add(d, result);
+                            memoP1.Add(d, result);
                             return result;
                         }
                     }
                 }
-                //if (!memo.ContainsKey(d))
-                    memo.Add(d, result);
+                memoP1.Add(d, result);
                 return result;
             }
-
-            /*LinkedList<string> list = new LinkedList<string>(towelsInput);
-
-            
-            //bool isSolvable = false;
-            for (int startTowelIndex = 0; startTowelIndex < towelsInput.Length; startTowelIndex++)
-            {
-                TextUtilities.CFWLine($"@GraStarting @Cya{design} @Grafrom index @Cya{startTowelIndex}@Gra");
-                if (startTowelIndex != 0)
-                {
-                    string firstNode = list.First!.ValueRef;
-                    list.RemoveFirst();
-                    list.AddLast(firstNode);
-                }
-                string[] towels = list.ToArray();
-
-
-                Queue<string> queue = new Queue<string>([design]);
-                while (queue.Count > 0)
-                {
-                    var s = queue.Dequeue();
-
-
-                    for (int towelIndex = 0; towelIndex < towels.Length; towelIndex++)
-                    {
-                        string towel = towels[towelIndex];
-
-                        var divided_s = s.Split(towel, StringSplitOptions.RemoveEmptyEntries);
-
-                        // If the (towel == s)
-                        // Continue without queuing
-                        if (divided_s.Length == 0)
-                        {
-                            //Console.ForegroundColor = ConsoleColor.Red;
-                            //Console.WriteLine(new string('-', 50));
-                            TextUtilities.CFWLine("@GraSplitting @Yel" + s + "@Gra with @Yel" + towel + "@Gra. Rest: @Mgn" + string.Join("@Gra|@Mgn", divided_s));
-                            TextUtilities.CFWLine("@Yel" + s + " @GraExists. Removing.");
-                            if (queue.Count == 0)
-                            {
-                                return true;
-                            }
-                            break;
-                        }
-                        // If rest.length is 1 and its remains is the same as the split, it means we couldn't split
-                        // Just continue to see if something else can split it
-                        else if (divided_s.Length == 1 && divided_s[0] == towel)
-                        {
-                            continue;
-                        }
-                        else if (divided_s.Length == 1 && divided_s[0] == s)
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            // If we managed to split, queue next and go to next in queue
-                            for (int i = 0; i < divided_s.Length; i++)
-                            {
-                                queue.Enqueue(divided_s[i]);
-                            }
-
-                            //Console.ForegroundColor = ConsoleColor.Red;
-                            //Console.WriteLine(new string('-', 50));
-                            TextUtilities.CFWLine("@GraSplitting @Yel" + s + "@Gra with @Yel" + towel + "@Gra. Rest: @Mgn" + string.Join("@Gra|@Mgn", divided_s));
-                            break;
-                        }
-
-
-
-                    }
-                }
-            }
-            return false;*/
         }
     }
 }
