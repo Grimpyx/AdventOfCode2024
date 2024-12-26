@@ -71,5 +71,21 @@ namespace AdventOfCode2024.Utilities
 
             return allAdjacents;
         }
+
+        
+        public static DataMap<char> GetCharMapFromRowData(string[] rowData)
+        {
+            Int2 dimension = new Int2(rowData[0].Length, rowData.Length);
+
+            char[,] grid = new char[dimension.x, dimension.y];
+            for (int y = 0; y < dimension.y; y++)
+            {
+                for (int x = 0; x < dimension.x; x++)
+                {
+                    grid[x, y] = rowData[y][x];
+                }
+            }
+            return new DataMap<char>(grid);
+        }
     }
 }
