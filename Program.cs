@@ -25,7 +25,7 @@ Dictionary<ushort, IDayChallenge> _days = new Dictionary<ushort, IDayChallenge>
     { 19, new Day19() },
     { 20, new Day20() },
     { 21, new Day21() },
-    //{ 22, new Day22() },
+    { 22, new Day22() },
     //{ 23, new Day23() },
     //{ 24, new Day24() },
     //{ 25, new Day25() }
